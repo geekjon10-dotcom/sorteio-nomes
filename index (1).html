@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorteio de Nomes</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { max-width: 450px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; }
+        input, button { width: 100%; padding: 10px; margin: 8px 0; }
+        button { background-color: #007bff; color: white; border: none; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        #eventImagePreview { width: 100%; margin-top: 10px; display: none; border-radius: 8px; }
+        .hidden { display: none; }
+        #qrArea { text-align: center; margin-top: 15px; }
+        #qrCode { width: 200px; height: 200px; margin: auto; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>🎉 Criar Evento</h2>
+    <input type="text" id="eventName" placeholder="Nome do evento (ex: CONFRA 2025)">
+    <input type="file" id="eventImage" accept="image/*">
+    <img id="eventImagePreview">
+    <button onclick="createEvent()">Criar Evento</button>
+    <div id="qrArea" class="hidden">
+        <h3>QR Code do Evento</h3>
+        <canvas id="qrCode"></canvas>
+        <p>Escaneie para acessar o evento</p>
+    </div>
+    <hr>
+    <h2>🔐 Entrar no Evento</h2>
+    <input type="text" id="loginEvent" placeholder="Nome do evento">
+    <input type="text" id="loginName" placeholder="Seu nome">
+    <button onclick="enterEvent()">Entrar</button>
+    <div id="eventArea" class="hidden">
+        <h2 id="eventTitle"></h2>
+        <img id="eventCover" style="width:100%; border-radius:8px; margin-bottom:10px;">
+        <button id="btnSortear" onclick="sortear()">🎁 Sortear</button>
+        <h3 id="result"></h3>
+    </div>
+</div>
+
+<script>
+    function loadEvents() { return JSON.parse(localStorage.getItem("events") || "{}"); }
+    function saveEvents(events) { localStorage.setItem("events", JSON.stringify(events)); }
+
+    document.getElementById("eventImage").addEventListener("change", function() {
+        const file = this.files[0];
+        const preview = document.getElementById("eventImagePreview");
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = "block";
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function createEvent() {
+        const name = document.getElementById("eventName").value.trim();
+        const imgFile = document.getElementById("eventImage").files[0];
+        if (!name) { alert("Digite o nome do evento!"); return; }
+
+        const events = loadEvents();
+        if (events[name]) { alert("Este evento já existe!"); return; }
+
+        let imgBase64 = "";
+        function finishCreation() {
+            events[name] = { cover: imgBase64, participants: [], draws: {} };
+            saveEvents(events);
+            alert("Evento criado com sucesso!");
+            generateQRCode(name);
+        }
+
+        if (imgFile) {
+            const reader = new FileReader();
+            reader.onload = e => { imgBase64 = e.target.result; finishCreation(); };
+            reader.readAsDataURL(imgFile);
+        } else finishCreation();
+    }
+
+    function generateQRCode(eventName) {
+        document.getElementById("qrArea").classList.remove("hidden");
+        const url = window.location.origin + window.location.pathname + "?event=" + encodeURIComponent(eventName);
+        new QRious({ element: document.getElementById("qrCode"), value: url, size: 200 });
+    }
+
+    function enterEvent() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventFromURL = urlParams.get("event");
+        const eventName = eventFromURL || document.getElementById("loginEvent").value.trim();
+        const userName = document.getElementById("loginName").value.trim();
+
+        if (!eventName || !userName) { alert("Preencha todos os campos!"); return; }
+
+        const events = loadEvents();
+        if (!events[eventName]) { alert("Evento não encontrado!"); return; }
+
+        const event = events[eventName];
+        if (!event.participants.includes(userName)) {
+            event.participants.push(userName);
+            saveEvents(events);
+        }
+
+        document.getElementById("eventTitle").textContent = eventName;
+
+        const cover = document.getElementById("eventCover");
+        cover.src = event.cover || "";
+        cover.style.display = event.cover ? "block" : "none";
+
+        document.getElementById("eventArea").classList.remove("hidden");
+
+        const btn = document.getElementById("btnSortear");
+        if (event.draws[userName]) {
+            btn.disabled = true;
+            document.getElementById("result").textContent = "Você já sorteou: " + event.draws[userName];
+        } else {
+            btn.disabled = false;
+            document.getElementById("result").textContent = "";
+        }
+
+        localStorage.setItem("currentUser", userName);
+        localStorage.setItem("currentEvent", eventName);
+    }
+
+    function sortear() {
+        const eventName = localStorage.getItem("currentEvent");
+        const userName = localStorage.getItem("currentUser");
+
+        const events = loadEvents();
+        const event = events[eventName];
+
+        if (event.draws[userName]) { alert("Você já sorteou!"); return; }
+
+        const disponíveis = event.participants.filter(
+            p => p !== userName && !Object.values(event.draws).includes(p)
+        );
+
+        if (disponíveis.length === 0) { alert("Não há mais nomes disponíveis!"); return; }
+
+        const sorteado = disponíveis[Math.floor(Math.random() * disponíveis.length)];
+        event.draws[userName] = sorteado;
+        saveEvents(events);
+
+        document.getElementById("result").textContent = "Você tirou: " + sorteado;
+        document.getElementById("btnSortear").disabled = true;
+    }
+
+    window.onload = function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventName = urlParams.get("event");
+        if (eventName) document.getElementById("loginEvent").value = eventName;
+    };
+</script>
+</body>
+</html>
