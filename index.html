@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sorteio de Nomes</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #4b79a1, #283e51);
+      padding: 40px;
+      color: #fff;
+    }
+    .container {
+      max-width: 550px;
+      margin: auto;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 30px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      color: #fff;
+    }
+    input, button, textarea {
+      width: 100%;
+      margin-top: 12px;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: none;
+    }
+    input, textarea {
+      background: rgba(255,255,255,0.85);
+      color: #000;
+    }
+    button {
+      background: #00d4ff;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { background: #00a6c4; }
+    h2 { text-align: center; margin-bottom: 20px; }
+    .result {
+      margin-top: 25px;
+      padding: 18px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid #00d4ff;
+      border-radius: 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img id="bannerCapa" style="display:none; width:100%; border-radius:15px; margin-bottom:20px;" />
+
+    <h2>Sorteio de Nomes</h2>
+
+    <label>Nome do Evento:</label>
+    <input type="text" id="evento" placeholder="Ex: CONFRA FATURAMENTO 2025" />
+
+    <label>Capa do Evento (imagem):</label>
+    <input type="file" id="capaEvento" accept="image/*" onchange="mostrarCapa()" />
+
+    <img id="previewCapa" style="display:none; margin-top:15px; width:100%; border-radius:12px;" />
+
+    <label>Seu Nome (não será sorteado para você):</label>
+    <input type="text" id="usuario" placeholder="Digite seu nome" />
+
+    <label>Lista de Participantes (um por linha):</label>
+    <textarea id="lista" rows="6" placeholder="Digite os nomes"></textarea>
+
+    <button onclick="sortear()">Sortear Nome</button>
+
+    <div id="resultado" class="result" style="display:none;"></div>
+  </div>
+
+  <script>
+    let nomesJaSorteados = [];
+
+    function mostrarCapa() {
+      const input = document.getElementById("capaEvento");
+      const imgThumb = document.getElementById("previewCapa");
+      const imgBanner = document.getElementById("bannerCapa");
+
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          imgThumb.src = e.target.result;
+          imgThumb.style.display = "block";
+
+          imgBanner.src = e.target.result;
+          imgBanner.style.display = "block";
+        }
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function sortear() {
+      const usuario = document.getElementById("usuario").value.trim();
+      const listaTexto = document.getElementById("lista").value.trim();
+      const resultado = document.getElementById("resultado");
+
+      if (!usuario || !listaTexto) {
+        alert("Por favor, preencha seu nome e a lista de participantes.");
+        return;
+      }
+
+      let nomes = listaTexto.split(/\n|,/).map(n => n.trim()).filter(n => n);
+      nomes = nomes.filter(n => n.toLowerCase() !== usuario.toLowerCase());
+      nomes = nomes.filter(n => !nomesJaSorteados.includes(n));
+
+      if (nomes.length === 0) {
+        resultado.style.display = "block";
+        resultado.textContent = "Não há mais nomes disponíveis para sorteio.";
+        return;
+      }
+
+      const sorteado = nomes[Math.floor(Math.random() * nomes.length)];
+      nomesJaSorteados.push(sorteado);
+
+      resultado.style.display = "block";
+      resultado.textContent = "Nome sorteado: " + sorteado;
+    }
+  </script>
+</body>
+</html>
