@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Sorteio de Amigo Oculto</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { font-family: Arial, sans-serif; padding:20px; background:#f4f4f4; }
+.container { max-width:600px; margin:auto; background:white; padding:20px; border-radius:10px; }
+input, button { width:100%; padding:10px; margin-top:10px; }
+#qrcode { margin-top:20px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="container">
+<h2>🎁 Criar Evento de Amigo Oculto</h2>
+<input id="eventoNome" placeholder="Nome do evento">
+<input id="participantes" placeholder="Participantes separados por vírgula">
+<button onclick="criarEvento()">Criar evento</button>
+<div id="qrcode"></div>
+
+<hr>
+
+<h2>🔐 Entrar no Evento</h2>
+<input id="eventoLogin" placeholder="Nome do evento">
+<input id="seuNome" placeholder="Seu nome">
+<button onclick="entrar()">Entrar</button>
+
+<div id="areaSorteio" style="display:none;">
+<h3>🎉 Sorteio</h3>
+<button onclick="sortear()">Sortear meu amigo oculto</button>
+<p id="resultado"></p>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+let eventos = {};
+
+function criarEvento(){
+  const nome = eventoNome.value.trim();
+  const lista = participantes.value.split(",").map(p => p.trim()).filter(p => p.length>0);
+  if(!nome || lista.length <2){ alert("Evento inválido"); return; }
+  eventos[nome] = { participantes: lista, sorteados: {} };
+  const url = window.location.href + "?evento=" + encodeURIComponent(nome);
+  document.getElementById("qrcode").innerHTML="";
+  new QRCode(document.getElementById("qrcode"), url);
+  alert("Evento criado!");
+}
+
+function entrar(){
+  const nome = eventoLogin.value.trim();
+  const pessoa = seuNome.value.trim();
+  if(!eventos[nome] || !eventos[nome].participantes.includes(pessoa)){
+    alert("Evento ou nome inválido");
+    return;
+  }
+  areaSorteio.style.display="block";
+  localStorage.setItem("eventoAtual", nome);
+  localStorage.setItem("pessoaAtual", pessoa);
+}
+
+function sortear(){
+  const nome = localStorage.getItem("eventoAtual");
+  const pessoa = localStorage.getItem("pessoaAtual");
+  const ev = eventos[nome];
+
+  if(ev.sorteados[pessoa]){
+    resultado.innerText = "Você já sorteou: " + ev.sorteados[pessoa];
+    return;
+  }
+
+  let pool = ev.participantes.filter(p => p !== pessoa && !Object.values(ev.sorteados).includes(p));
+  if(pool.length === 0){
+    resultado.innerText = "Não há mais pessoas disponíveis!";
+    return;
+  }
+
+  const amigo = pool[Math.floor(Math.random() * pool.length)];
+  ev.sorteados[pessoa] = amigo;
+  resultado.innerText = "Seu amigo oculto é: " + amigo;
+}
+</script>
+</body>
+</html>
